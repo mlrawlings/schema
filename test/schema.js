@@ -32,14 +32,20 @@ describe('Schema#new()', function() {
 		}).should.throw(/default/i)
 	})
 	it('should call validator parameter functions and add them to key\'s validators', function() {
-		var fake, schema, def = { num:{ type:Number, fake_max:4 } }
+		var validator, schema, def = { num:{ type:Number, max:4 } }
 		
-		fake = sinon.spy()
-		Schema.validators.fake_max = sinon.stub().returns(fake)
+		sinon.stub(Schema.validators, 'max').returns(validator = sinon.spy())
 		schema = new Schema(def)
 
-		Schema.validators.fake_max.calledWith(4, 'num', def.num).should.be.true
-		schema.definition.num.validators[0].should.equal(fake)
+		Schema.validators.max.calledWith(4, 'num', def.num).should.be.true
+		Schema.validators.max.restore()
+
+		schema.definition.num.validators[0].should.equal(validator)
+	})
+	it('should require a schema for objects', function() {
+		(function() {
+			new Schema({ test:Object })
+		}).should.throw()
 	})
 	it('should handle crazy nested schemas', function() {
 		var schema = new Schema({ 
@@ -54,7 +60,7 @@ describe('Schema#new()', function() {
 				}]
 			}] 
 		})
-
+   
 		schema.definition.people.type.should.equal(Array)
 		schema.definition.people.items.type.should.equal(Object)
 		schema.definition.people.items.schema.definition.locations.type.should.equal(Array)
@@ -133,9 +139,13 @@ describe('Schema#validateField()', function() {
 
 describe('Schema#validate()', function() {
 	var schema = new Schema({ 
-		name: { type:String, required:true }, 
+		name: { type:String, required:true },  
+		nickname: { type:String, required:function(obj, key, name) {
+			if(obj.name.length > 9) 
+				throw new Error(name + ' is required when Name is longer than 9 chars.')
+		}},
 		age: { type:Number, default:18 }, 
-		birthday:Date, 
+		birthday:Date,
 		address:{ 
 			street:String, 
 			zip:{ type:String, default:'24019' } 
@@ -148,7 +158,7 @@ describe('Schema#validate()', function() {
 	})
 
 	it('should return all errors', function() {
-		schema.validate({ name:123, age:'abc' }).errors.length.should.equal(2)
+		schema.validate({ name:123, nickname:'one', age:'abc' }).errors.length.should.equal(2)
 	})
 
 	it('should apply defaults to non-existant keys', function() {
@@ -157,5 +167,8 @@ describe('Schema#validate()', function() {
 		data.age.should.equal(18)
 		data.address.zip.should.equal('24019')
 	})
-	it('should require required fields')
+	it('should require required fields', function() {
+		schema.validate({}).result.should.be.false
+		schema.validate({ name:'Maximilienne' }).result.should.be.false
+	})
 })
