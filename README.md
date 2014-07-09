@@ -39,13 +39,13 @@ schema.validate({ name:'John Doe', age:27 })
 //returns { result:true }
 
 schema.validate({ name:'John Doe', age:'old' })
-//returns { result:false, errors:[new Error('Age is invald. "old" is not a Number')] }
+//returns { result:false, errors:[new Error('Age is invalid. "old" is not a Number')] }
 
 schema.validateField({ name:'Jane Doe', age:'young' }, 'name')
 //returns { result:true }
 
 schema.validateField({ name:'Jane Doe', age:'young' }, 'age')
-//returns { result:false, error:new Error('Age is invald. "young" is not a Number') }
+//returns { result:false, error:new Error('Age is invalid. "young" is not a Number') }
 ```
 
 ## <a name="Properties"></a>Properties
@@ -101,8 +101,8 @@ Must match the function signature `function(value, object, key, name)`.
 Types are automatically coerced into their defined types when possible.  This is done by passing the given value to the constructor for the defined type.  By default, only string values are passed.
 
 ```javascript
-var data = { count:'10', when:Date }
-  , schema = new Schema({ count:Number, when:'2014-01-01' })
+var data = { count:'10', when:'2014-01-01' }
+  , schema = new Schema({ count:Number, when:Date })
   
 schema.validate(data)
 console.log(data)
