@@ -11,7 +11,11 @@ describe('Schema#new()', function() {
 		var schema = new Schema({ test:{ a:String } })
 		schema.definition.test.schema.should.be.an.instanceof(Schema)
 	})
-	it('should handle shorthand arrays')
+	it('should handle shorthand arrays', function() {
+		var schema = new Schema({ test: [String] })
+		schema.definition.test.type.should.equal(Array)
+		schema.definition.test.items.type.should.equal(String)
+	})
 	it('should throw on an invalid type', function() {
 		(function() {
 			var schema = new Schema({ test:'hi' })
@@ -37,53 +41,121 @@ describe('Schema#new()', function() {
 		Schema.validators.fake_max.calledWith(4, 'num', def.num).should.be.true
 		schema.definition.num.validators[0].should.equal(fake)
 	})
+	it('should handle crazy nested schemas', function() {
+		var schema = new Schema({ 
+			name:String,
+			people: [{
+				locations: [{
+					name:String,
+					address: {
+						street:String,
+						zip:String
+					}
+				}]
+			}] 
+		})
+
+		schema.definition.people.type.should.equal(Array)
+		schema.definition.people.items.type.should.equal(Object)
+		schema.definition.people.items.schema.definition.locations.type.should.equal(Array)
+		schema.definition.people.items.schema.definition.locations.items.type.should.equal(Object)
+		schema.definition.people.items.schema.definition.locations.items.schema.definition.address.type.should.equal(Object)
+		schema.definition.people.items.schema.definition.locations.items.schema.definition.address.schema.definition.zip.type.should.equal(String)
+	})
 })
 
 describe('Schema#validateField()', function() {
-	var schema = new Schema({ 
-		name:String, 
-		age:Number, 
-		birthday:Date, 
-		address:{ 
-			street:String, 
-			zip:String 
-		} 
-	})
+	var validator_pass = sinon.stub()
+	  , validator_fail = sinon.stub().throws(new Error('failure'))
+	  , validator_transform = sinon.stub().returns(42)
+	  , schema = new Schema({ 
+	    	name:String, 
+	    	age: { type:Number, default:18 }, 
+	    	birthday:Date, 
+	    	address:{ 
+	    		street:String, 
+	    		zip:String 
+	    	},
+	    	phones: [String],
+	    	pass: { type:String, validators:[validator_pass] },
+	    	fail: { type:String, validators:[validator_fail] },
+	    	transform: { type:Number, validators:[validator_transform] }
+	    })
 
 	it('should validate type', function() {
-		schema.validateField({ name:'Michael' }, 'name').result.should.equal(true)
-		schema.validateField({ name:1 }, 'name').result.should.equal(false)
+		schema.validateField({ name:'Michael' }, 'name').result.should.be.true
+		schema.validateField({ name:1 }, 'name').result.should.be.false
 	})
 	it('should coerce type', function() {
 		var data = { birthday:'1990-06-09', age:'10' }
-		schema.validateField(data, 'birthday').result.should.equal(true)
+		schema.validateField(data, 'birthday').result.should.be.true
 		data.birthday.should.be.an.instanceof(Date)
-		schema.validateField(data, 'age').result.should.equal(true)
+		schema.validateField(data, 'age').result.should.be.true
 		data.age.should.be.an.instanceof(Number)
 	})
 	it('should not allow keys not defined in the schema', function() {
-		schema.validateField({ i_dont_exist:1 }, 'i_dont_exist').result.should.equal(false)
+		schema.validateField({ i_dont_exist:1 }, 'i_dont_exist').result.should.be.false
 	})
-	it('should call validators')
-})
+	it('should call validators', function() {
+		var obj = { pass:'abc', fail:'123', transform:1 }
+		  , pass_result, fail_result, transform_result
+		
+		pass_result = schema.validateField(obj, 'pass')
+		validator_pass.calledWith(obj.pass, obj, 'pass', 'Pass').should.be.true
+		pass_result.result.should.be.true
+		
+		fail_result = schema.validateField(obj, 'fail')
+		validator_fail.threw().should.be.true
+		fail_result.result.should.be.false
+		
+		transform_result = schema.validateField(obj, 'transform')
+		validator_transform.calledWith(1, obj, 'transform', 'Transform').should.be.true
+		transform_result.result.should.be.true
+		obj.transform.should.equal(42)
+	})
+	it('should validate nested keys', function() {
+		schema.validateField({ address: { street:'123 Easy St.' } }, 'address.street').result.should.be.true
+		schema.validateField({ address: { street:'123 Easy St.' } }, 'address').result.should.be.true
+		schema.validateField({ address: { street:[] } }, 'address.street').result.should.be.false
+	})
+	it('should validate arrays', function() {
+		schema.validateField({ phones:[] }, 'phones').result.should.be.true
+		schema.validateField({ phones:['555-555-5555'] }, 'phones').result.should.be.true
+		schema.validateField({ phones:[123] }, 'phones').result.should.be.false
+		schema.validateField({ phones:'555-555-5555' }, 'phones').result.should.be.false
+	})
+	it('should apply defaults', function() {
+		var data = { age:null }
+		schema.validateField(data, 'age').result.should.be.true
+		data.age.should.equal(18)
+	})
+}) 
 
 describe('Schema#validate()', function() {
 	var schema = new Schema({ 
-		name:String, 
-		age:Number, 
+		name: { type:String, required:true }, 
+		age: { type:Number, default:18 }, 
 		birthday:Date, 
 		address:{ 
 			street:String, 
-			zip:String 
+			zip:{ type:String, default:'24019' } 
 		} 
 	})
 	
 	it('should validate types', function() {
-		schema.validate({ name:'Michael', age:24, birthday:new Date('1990-06-09')}).result.should.equal(true)
-		schema.validate({ name:'Michael', age:'abc', birthday:new Date('1990-06-09')}).result.should.equal(false)
+		schema.validate({ name:'Michael', age:24, birthday:new Date('1990-06-09')}).result.should.be.true
+		schema.validate({ name:'Michael', age:'abc', birthday:new Date('1990-06-09')}).result.should.be.false
 	})
 
 	it('should return all errors', function() {
 		schema.validate({ name:123, age:'abc' }).errors.length.should.equal(2)
 	})
+
+	it('should apply defaults to non-existant keys', function() {
+		var data = { name:'Michael' }
+		schema.validate(data).result.should.be.true
+		data.age.should.equal(18)
+		data.address.zip.should.equal('24019')
+	})
+	it('should require required fields')
 })
