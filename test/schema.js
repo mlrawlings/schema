@@ -59,6 +59,7 @@ describe('Schema', function() {
 			schema.definition.people.items.schema.definition.locations.items.schema.definition.address.type.should.equal(Object)
 			schema.definition.people.items.schema.definition.locations.items.schema.definition.address.schema.definition.zip.type.should.equal(String)
 		})
+		it('should handle field-level plugins')
 	})
 
 	describe('.use()', function() {
@@ -81,18 +82,6 @@ describe('Schema', function() {
 })
 
 describe('schema', function() {
-	
-	describe('.extend()', function() {
-		it('should be tested')
-	})
-
-	describe('.discriminate()', function() {
-		it('should be tested')
-	})
-
-	describe('.only()', function() {
-		it('should be tested')
-	})
 
 	describe('.use()', function() {
 		it('should call the plugin with the schema and options', function() {
@@ -214,6 +203,22 @@ describe('schema', function() {
 			schema.validate({}).result.should.be.false
 			schema.validate({ name:'Maximilienne' }).result.should.be.false
 		})
+	})
+
+	describe('.discriminate()', function() {
+		it('should be tested')
+	})
+	
+	describe('.clone()', function() {
+		it('should be tested')
+	})
+	
+	describe('.extend()', function() {
+		it('should be tested')
+	})
+
+	describe('.only()', function() {
+		it('should be tested')
 	})
 
 })
