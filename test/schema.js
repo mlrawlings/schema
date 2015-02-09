@@ -123,6 +123,7 @@ describe('schema', function() {
 		it('should validate type', function() {
 			schema.validateField({ name:'Michael' }, 'name').result.should.be.true
 			schema.validateField({ name:1 }, 'name').result.should.be.false
+			schema.validateField({ name:1 }, 'name').errors.should.eql([new Error('Expected Name to be a String.')])
 		})
 		it('should coerce type', function() {
 			var data = { birthday:'1990-06-09', age:'10' }
@@ -187,6 +188,8 @@ describe('schema', function() {
 		it('should validate types', function() {
 			schema.validate({ name:'Michael', age:24, birthday:new Date('1990-06-09')}).result.should.be.true
 			schema.validate({ name:'Michael', age:'abc', birthday:new Date('1990-06-09')}).result.should.be.false
+			schema.validate({ name:'Michael', age:'abc', birthday:new Date('1990-06-09')}).errors.should.eql([new Error('Expected Age to be a Number.')])
+			schema.validate({ name:'Michael', age:24, birthday:new Date('1990-06-09'), address:{ street:2 }}).errors.should.eql([new Error('Expected Street to be a String.')])
 		})
 
 		it('should return all errors', function() {
