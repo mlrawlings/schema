@@ -1,5 +1,6 @@
 var should = require('should')
   , sinon = require('sinon')
+  , Errors = require('common-errors')
   , Schema = require('../lib/schema')
 
 describe('Schema', function() {
@@ -29,9 +30,13 @@ describe('Schema', function() {
 			}).should.throw(/test\.whoa/i)
 		})
 		it('should throw on an invalid default', function() {
-			(function() {
+			try {
 				var schema = new Schema({ test:{ type:String, default:1 } })
-			}).should.throw(/default/i)
+			} catch(e) {
+				e.should.be.an.instanceof(Errors.ValidationError)
+				e.errors.length.should.equal(1)
+				e.errors[0].message.toString().should.match(/default/)
+			}
 		})
 		it('should require a schema for objects', function() {
 			(function() {
@@ -121,51 +126,89 @@ describe('schema', function() {
 		    })
 
 		it('should validate type', function() {
-			schema.validateField({ name:'Michael' }, 'name').result.should.be.true
-			schema.validateField({ name:1 }, 'name').result.should.be.false
-			schema.validateField({ name:1 }, 'name').errors.should.eql([new Error('Expected Name to be a String.')])
+			schema.validateField({ name:'Michael' }, 'name').should.be.true
+			try {
+				schema.validateField({ name:1 }, 'name')
+				throw new Error('should have thrown')
+			} catch(e) {
+				e.should.be.an.instanceof(Errors.ValidationError)
+				e.errors.length.should.eql(1)
+				e.errors[0].message.toString().should.match(/Expected Name to be a String/)
+			}
 		})
 		it('should coerce type', function() {
 			var data = { birthday:'1990-06-09', age:'10' }
-			schema.validateField(data, 'birthday').result.should.be.true
+			schema.validateField(data, 'birthday').should.be.true
 			data.birthday.should.be.an.instanceof(Date)
-			schema.validateField(data, 'age').result.should.be.true
+			schema.validateField(data, 'age').should.be.true
 			data.age.should.be.an.instanceof(Number)
 		})
 		it('should not allow keys not defined in the schema', function() {
-			schema.validateField({ i_dont_exist:1 }, 'i_dont_exist').result.should.be.false
+			try {
+				schema.validateField({ i_dont_exist:1 }, 'i_dont_exist')
+				throw new Error('should have thrown')
+			} catch(e) {
+				e.should.be.an.instanceof(Errors.ValidationError)
+				e.errors.length.should.eql(1)
+				e.errors[0].message.toString().should.match(/i_dont_exist is not in the schema/)
+			}
 		})
 		it('should call validators', function() {
 			var obj = { pass:'abc', fail:'123', transform:1 }
-			  , pass_result, fail_result, transform_result
 			
-			pass_result = schema.validateField(obj, 'pass')
+			schema.validateField(obj, 'pass').should.be.true
 			validator_pass.calledWith(obj.pass, obj, 'pass', 'Pass').should.be.true
-			pass_result.result.should.be.true
 			
-			fail_result = schema.validateField(obj, 'fail')
-			validator_fail.threw().should.be.true
-			fail_result.result.should.be.false
+			try {
+				schema.validateField(obj, 'fail')
+				throw new Error('should have thrown')
+			} catch(e) {
+				e.should.be.an.instanceof(Errors.ValidationError)
+				validator_fail.threw().should.be.true
+			}
 			
-			transform_result = schema.validateField(obj, 'transform')
+			schema.validateField(obj, 'transform').should.be.true
 			validator_transform.calledWith(1, obj, 'transform', 'Transform').should.be.true
-			transform_result.result.should.be.true
 			obj.transform.should.equal(42)
 		})
 		it('should validate nested keys', function() {
-			schema.validateField({ address: { street:'123 Easy St.' } }, 'address.street').result.should.be.true
-			schema.validateField({ address: { street:'123 Easy St.' } }, 'address').result.should.be.true
-			schema.validateField({ address: { street:[] } }, 'address.street').result.should.be.false
+			schema.validateField({ address: { street:'123 Easy St.' } }, 'address.street').should.be.true
+			schema.validateField({ address: { street:'123 Easy St.' } }, 'address').should.be.true
+			try {
+				schema.validateField({ address: { street:[] } }, 'address.street')
+				throw new Error('should have thrown')
+			} catch(e) {
+				e.should.be.an.instanceof(Errors.ValidationError)
+				e.errors.length.should.eql(1)
+				e.errors[0].message.toString().should.match(/Expected Street to be a String/)
+			}
 		})
 		it('should validate arrays', function() {
-			schema.validateField({ phones:[] }, 'phones').result.should.be.true
-			schema.validateField({ phones:['555-555-5555'] }, 'phones').result.should.be.true
-			schema.validateField({ phones:[123] }, 'phones').result.should.be.false
-			schema.validateField({ phones:'555-555-5555' }, 'phones').result.should.be.false
+			schema.validateField({ phones:[] }, 'phones').should.be.true
+			schema.validateField({ phones:['555-555-5555'] }, 'phones').should.be.true
+
+			try {
+				schema.validateField({ phones:[123] }, 'phones')
+				throw new Error('should have thrown')
+			} catch(e) {
+				e.should.be.an.instanceof(Errors.ValidationError)
+				e.errors.length.should.eql(1)
+				e.errors[0].message.toString().should.match(/Expected Phones\[\] to be a String/)
+			}
+			
+			try {
+				schema.validateField({ phones:'555-555-5555' }, 'phones')
+				throw new Error('should have thrown')
+			} catch(e) {
+				e.should.be.an.instanceof(Errors.ValidationError)
+				e.errors.length.should.eql(1)
+				e.errors[0].message.toString().should.match(/Expected Phones to be a Array/)
+			}
 		})
+
 		it('should apply defaults', function() {
 			var data = { age:null }
-			schema.validateField(data, 'age').result.should.be.true
+			schema.validateField(data, 'age').should.be.true
 			data.age.should.equal(18)
 		})
 	}) 
@@ -186,25 +229,45 @@ describe('schema', function() {
 		})
 		
 		it('should validate types', function() {
-			schema.validate({ name:'Michael', age:24, birthday:new Date('1990-06-09')}).result.should.be.true
-			schema.validate({ name:'Michael', age:'abc', birthday:new Date('1990-06-09')}).result.should.be.false
-			schema.validate({ name:'Michael', age:'abc', birthday:new Date('1990-06-09')}).errors.should.eql([new Error('Expected Age to be a Number.')])
-			schema.validate({ name:'Michael', age:24, birthday:new Date('1990-06-09'), address:{ street:2 }}).errors.should.eql([new Error('Expected Street to be a String.')])
+			schema.validate({ name:'Michael', age:24, birthday:new Date('1990-06-09')}).should.be.true
+			try {
+				schema.validate({ name:'Michael', age:'abc', birthday:new Date('1990-06-09'), address:{ street:2 }})
+				throw new Error('should have thrown')
+			} catch(e) {
+				e.should.be.an.instanceof(Errors.ValidationError)
+				e.errors.length.should.eql(2)
+			}
 		})
 
 		it('should return all errors', function() {
-			schema.validate({ name:123, nickname:'one', age:'abc' }).errors.length.should.equal(2)
+			try {
+				schema.validate({ name:123, nickname:'one', age:'abc' })
+				throw new Error('should have thrown')
+			} catch(e) {
+				e.errors.length.should.eql(2)
+			}
 		})
 
 		it('should apply defaults to non-existant keys', function() {
 			var data = { name:'Michael' }
-			schema.validate(data).result.should.be.true
+			schema.validate(data).should.be.true
 			data.age.should.equal(18)
 			data.address.zip.should.equal('24019')
 		})
 		it('should require required fields', function() {
-			schema.validate({}).result.should.be.false
-			schema.validate({ name:'Maximilienne' }).result.should.be.false
+			try {
+				schema.validate({})
+				throw new Error('should have thrown')
+			} catch(e) {
+				e.should.be.an.instanceof(Errors.ValidationError)
+			}
+
+			try {
+				schema.validate({ name:'Maximilienne' })
+				throw new Error('should have thrown')
+			} catch(e) {
+				e.should.be.an.instanceof(Errors.ValidationError)
+			}
 		})
 	})
 

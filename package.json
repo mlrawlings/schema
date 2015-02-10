@@ -15,8 +15,9 @@
     "test": "test"
   },
   "dependencies": {
-    "sinon": "^1.10.2",
-    "should": "^4.0.4"
+    "common-errors": "^0.4.18",
+    "should": "^4.0.4",
+    "sinon": "^1.10.2"
   },
   "repository": {
     "type": "git",
