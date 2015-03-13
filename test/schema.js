@@ -1,5 +1,4 @@
 var should = require('should')
-  , sinon = require('sinon')
   , ValidationError = require('common-errors').ValidationError
   , Schema = require('../lib/schema')
 
@@ -104,7 +103,7 @@ describe('Schema', function() {
 			var schema = new Schema({ age:Number }).extendWhen({ age:{ $gt:16 } }, { license:String })
 
 			schema.when.length.should.equal(1)
-			schema.when[0].query.should.have.property('test') //filtr query
+			schema.when[0].test.should.be.instanceof(Function)
 			schema.when[0].definition.should.eql({
 				  type:Object
 				, properties: {

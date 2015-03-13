@@ -1,5 +1,4 @@
 var should = require('should')
-  , sinon = require('sinon')
   , util = require('../lib/util')
 
 describe('util', function() {

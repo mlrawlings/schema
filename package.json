@@ -16,7 +16,7 @@
   "dependencies": {
     "clone": "^1.0.1",
     "common-errors": "^0.4.18",
-    "filtr": "^0.3.0"
+    "sift": "^1.1.0"
   },
   "repository": {
     "type": "git",
