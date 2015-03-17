@@ -76,6 +76,7 @@ describe('Schema', function() {
 				, default: { age:18, name:'Michael' }
 			})
 		})
+		it('should ')
 	})
 	describe('extend()', function() {
 		it('should extend the existing schema', function() {
@@ -112,10 +113,10 @@ describe('Schema', function() {
 			})
 		})
 	})
-	describe('getActiveSchema()', function() {
+	describe('getActiveDefinition()', function() {
 		it('should return the applicable schema', function() {
 			var schema = new Schema({ age:Number }).extendWhen({ age:{ $gt:16 } }, { license:String })
-			  , active = schema.getActiveSchema({ age:18 })
+			  , active = schema.getActiveDefinition({ age:18 })
 
 			active.type.should.equal(Object)
 			active.properties.should.eql({
@@ -127,7 +128,7 @@ describe('Schema', function() {
 			var schema = new Schema({ age:Number }).extendWhen({ age:{ $gt:16 } }, { license:String })
 			  , originalString = JSON.stringify(schema)
 
-			schema.getActiveSchema({ age:18 })
+			schema.getActiveDefinition({ age:18 })
 
 			originalString.should.equal(JSON.stringify(schema))
 		})
@@ -266,7 +267,6 @@ describe('Schema', function() {
 
 			try {
 				schema.validate({ age:12, license:'A984327985' })
-				console.log(schema.getActiveSchema({ age:12, license:'A984327985' }))
 				throw new Error('Should have been too young to have a license')
 			} catch(e) {
 				e.should.be.instanceof(ValidationError)
