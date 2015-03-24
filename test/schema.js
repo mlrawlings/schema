@@ -76,7 +76,6 @@ describe('Schema', function() {
 				, default: { age:18, name:'Michael' }
 			})
 		})
-		it('should ')
 	})
 	describe('extend()', function() {
 		it('should extend the existing schema', function() {
