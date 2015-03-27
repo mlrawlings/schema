@@ -1,4 +1,6 @@
-# Schema.js
+# schema-js
+
+`npm install schema-js`
 
 ## <a name="define"></a> Defining a Schema
 
@@ -86,7 +88,7 @@ schema.validate({ name:'John Doe', age:'old' })
 
 ## API
 
-###`new Schema(definition)`
+### `new Schema(definition)`
 
 **definition**  
 An object defining fields to be added to the schema.  See [Defining a Schema](#define) and [Field Options](#options).
